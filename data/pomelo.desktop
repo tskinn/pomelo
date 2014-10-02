@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Pomelo
+GenericName=Pomodoro App
+Comment=Get productive get pomelo
+Categories=GTK;Productivity;
+Exec=pomelo
+Icon=pomelo
+Terminal=false
+Type=Application
+X-GNOME-Gettext-Domain=pomelo
+X-GNOME-Keywords=Pomodoro;Timer;Productivity;

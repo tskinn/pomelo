@@ -1,0 +1,3 @@
+# Hashes of file build rules.
+5065f8ca11a6a450cfeea2759fb03d08 pomelo_valac.stamp
+25f3d6ae3ba897058699fbc2381085e7 src/MainWindow.c

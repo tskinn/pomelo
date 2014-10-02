@@ -1,0 +1,14 @@
+Source: pomelo
+Section: x11
+Priority: extra
+Maintainer: Taylor Skinner <tskinn12@gmail.com>
+Build-Depends: cmake (>= 2.8),
+               debhelper (>= 8.0.0),
+               valac-0.16 | valac (>= 0.16)
+Standards-Version: 3.9.3
+
+Package: pomelo
+Architecture: any
+Depends: ${misc:Depends}, ${shlibs:Depends}
+Description: Pomodoro Helper.
+ Use the Pomodoro technique to get more things done!

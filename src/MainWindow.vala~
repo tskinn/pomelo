@@ -1,0 +1,216 @@
+using Gtk;
+using AppIndicator;//////////////
+using Notify;
+
+
+namespace Pomelo {
+    
+    public class MainWindow : Gtk.Window {
+        
+        private PomeloApp app;
+        
+        //
+        private Indicator indicator;
+        
+        private Gtk.Image image;
+        private Gtk.Label label;
+        private Set sesh;
+        private TimeoutSource time;
+        /*
+        private int pomodoro_length;
+        private int break_length;
+        private int long_break_length;
+        */
+        //
+        
+        
+        public MainWindow (PomeloApp app) {
+            this.app = app;
+            this.set_application (app);
+            
+            // Window 
+            this.set_size_request (500, 300);
+            this.window_position = Gtk.WindowPosition.CENTER;
+                        
+            // Pomodoro session stuff
+            sesh = new Set ();
+            time = new TimeoutSource(500);
+            
+            // Build UI
+            setup_ui ();
+            this.show_all ();
+        }
+        
+        private void setup_ui () {
+            var grid = new Gtk.Grid ();
+ 
+            // Toolbar
+            var toolbar = new Gtk.Toolbar ();
+            toolbar.get_style_context ().add_class ("primary-toolbar");
+            
+            // AppMenu
+            var menu = new Gtk.Menu ();
+            var preferences_item = new Gtk.MenuItem.with_label ("Preferences");
+            preferences_item.activate.connect (() => {
+                /*
+                Preferences preferences = new Preferences (this);
+                preferences.destroy.connect (Gtk.main_quit);
+		        preferences.show_all ();
+		        */
+            });
+            menu.attach (preferences_item, 0, 1, 0, 1);
+            //var item4 = new Gtk.MenuItem.with_label ("Yo");
+            //menu.attach (item4, 0, 1, 1, 2);           
+            var app_menu = (this.app as Granite.Application).create_appmenu (menu);
+            
+            // Populate the toolbar
+            var item = new Gtk.ToolItem ();
+            item.set_expand (true);
+            
+            toolbar.add (item);
+            toolbar.add (app_menu);
+            
+           
+           
+            //////////////////////////////////////////////////////////////////
+            label = new Gtk.Label ("00:00");
+            image = new Gtk.Image.from_file ("../data/images/tom0.svg");
+            //////////////////////////////////////////////////////////////////            
+           
+            
+            
+            // Indicator stuff
+            indicator = new Indicator("yo", "emblem-favorite-symbolic",
+                                   IndicatorCategory.APPLICATION_STATUS);
+
+            indicator.set_status (IndicatorStatus.ACTIVE);
+            indicator.set_attention_icon ("document-open-recent");
+            
+            var indicator_menu = new Gtk.Menu();
+       
+            var indicator_item = new Gtk.MenuItem.with_label("Start");
+            indicator_item.activate.connect(() => {
+                set_timeout ();
+                indicator.set_status(IndicatorStatus.ATTENTION);
+            });
+            indicator_item.show();
+            indicator_menu.append(indicator_item);
+            indicator_item = new Gtk.MenuItem.with_label("Stop");
+            indicator_item.show();
+            indicator_item.activate.connect(() => {
+                sesh.stop ();                
+                notify_stop ();
+            });
+            indicator_menu.append(indicator_item);
+
+            indicator.set_label("Ready", "00:00");
+            indicator.set_menu(indicator_menu);
+            
+            ////////////////////////////////////////////////
+            
+            
+            
+            
+            
+            
+            /////////////////////////////////////////////
+            
+            
+            // Start Button
+            var start_button = new Button ();
+            var start_image = new Image.from_icon_name ("media-playback-start", IconSize.DIALOG);           
+            start_button.set_image (start_image);
+            start_button.clicked.connect (() => {
+                set_timeout ();
+                indicator.set_status(IndicatorStatus.ATTENTION);
+            });
+    
+            // Stop Button
+            var stop_button = new Button ();
+            var stop_image = new Image.from_icon_name ("media-playback-stop", IconSize.DIALOG);
+            stop_button.set_image (stop_image);         
+            stop_button.clicked.connect (() => {
+                sesh.stop ();
+                
+                //time.destroy ();
+            });
+            
+            
+            
+            
+         
+            toolbar.set_hexpand (true);
+            grid.attach (toolbar, 0, 0, 2, 2);
+            grid.attach (start_button, 1, 2, 1, 2);
+            grid.attach (stop_button, 1, 4, 1, 2);
+            grid.attach (label, 0, 2, 1, 2);
+            grid.attach (image, 0, 4, 1, 3);
+            this.add (grid);
+            
+        }
+        
+        private void notify_completed () {
+            string title = "You finished this " + sesh.get_current_name ();
+            string message = "You've completed " + sesh.pomos_completed.to_string () +
+                               " Pomodoros. Keep goin!";
+            string icon = "add";
+            show_notify (title, message, icon);
+        }
+        private void notify_stop () {
+            string title = "Pomodoro Session Stopped!";
+            string message = "You'll have to restart sorry bro keeep on keepin on!";
+            string icon = "process-stop";
+            show_notify (title, message, icon);
+        }
+        private void show_notify (string title, string message, string icon) {
+            try {
+                Notify.init ("Pomelo");
+                Notification notification = new Notification (title, message, icon);                
+                notification.show ();
+            } catch (Error e) {
+                error ("Error: %s", e.message);
+            }
+        }
+        private void set_timeout () {
+            time = new TimeoutSource(500);
+            sesh.start_session ();
+            time.set_callback(() => {
+               
+               // make this whole thing a funciton so other things can
+               // call it like the indicator button
+               int divisor = sesh.get_total_length () / 20;
+               string filename = "../data/images/tom" + (((sesh.time_passed / divisor)) % 20).to_string () + ".svg";
+               image.set_from_file(filename);
+               
+                //var time_left = 300 - difference;
+                int seconds = sesh.get_seconds_left ();
+                int minutes = sesh.get_minutes_left ();
+                //print ("%d\n", time_left);
+                //print ("%d:%d\n", time_left / 60, time_left % 60);
+                StringBuilder builder = new StringBuilder ("");
+                builder.printf ("%02d:%02d", minutes, seconds);
+                
+                indicator.set_label(builder.str, "00:00");
+                label.set_label (builder.str);
+                
+                
+                switch (sesh.update ()) {
+                    case 1:
+                        notify_stop ();
+                        return false;
+                        //break;
+                    case 2:
+                        notify_completed ();
+                        break;
+                    case 3:
+                        break;
+                    default:
+                        return true;
+                }
+                return true;
+            });
+                
+            time.attach(null);
+        }
+    }
+}
